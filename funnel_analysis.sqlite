@@ -1,0 +1,53 @@
+-- 2.1 Survey response rate --
+SELECT COUNT(DISTINCT user_id) AS "num_responses", 
+  question AS "Questions"
+FROM survey
+GROUP BY 2
+ORDER BY 2 ASC;
+
+-- 2.1 A/B completion rate analysis --
+WITH funnels AS (
+  SELECT DISTINCT q.user_id,
+    h.number_of_pairs,
+    h.user_id IS NOT NULL AS "is_home_try_on", 
+    p.user_id IS NOT NULL AS "is_purchase" 
+  FROM quiz q
+  LEFT JOIN home_try_on h
+    ON q.user_id = h.user_id
+  LEFT JOIN purchase p
+    ON p.user_id = q.user_id
+)
+SELECT COUNT(DISTINCT user_id) as num_customers,
+  100.0 * SUM(is_home_try_on) / COUNT(*) AS hto_completionrate,
+  100.0 * SUM(is_purchase) / SUM(is_home_try_on) AS hto_to_purchase,
+  100.0 * SUM(is_purchase) / COUNT(*) AS overall_purchase
+FROM funnels;
+
+-- 2.2 A/B completion rate for segments --
+WITH funnels AS (
+  SELECT DISTINCT q.user_id,
+    h.number_of_pairs,
+    h.user_id IS NOT NULL AS "is_home_try_on", 
+    p.user_id IS NOT NULL AS "is_purchase" 
+  FROM quiz q
+  LEFT JOIN home_try_on h
+    ON q.user_id = h.user_id
+  LEFT JOIN purchase p
+    ON p.user_id = q.user_id
+)
+SELECT number_of_pairs, COUNT(DISTINCT user_id) as num_customers,
+  ROUND((100.0 * SUM(is_purchase) / COUNT(*)), 2) AS purchase_rate
+FROM funnels
+WHERE number_of_pairs IS NOT NULL
+GROUP BY 1;
+
+-- 2.3 Top Products --
+
+SELECT model_name,
+  style,
+  color,
+  COUNT(product_id) as Sales,
+  ROUND((100.0 * COUNT(product_id) / 495.0), 2) as "Purchase Rate"
+FROM purchase
+GROUP BY 1, 2, 3
+ORDER BY 4 DESC;
